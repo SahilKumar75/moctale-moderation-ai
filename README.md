@@ -67,6 +67,7 @@ Useful docs:
 - `docs/dataset_card.md`
 - `docs/labeling_guidelines.md`
 - `docs/AGENT_REVIEW_SUMMARY.md`
+- `docs/CONTINUE_IN_NEW_CHAT.md`
 
 ## Model Choice
 
@@ -126,4 +127,10 @@ The full discovery notes, policy decisions, example cases, and algorithm details
 
 ## Next Step
 
-Build the first notebook with synthetic and screenshot-inspired sample comments, then test the hybrid decision logic against a small labeled benchmark set.
+The first notebook has been generated locally at:
+
+`notebooks/moctale_moderation_ai_demo.ipynb`
+
+It has not been tuned or committed yet. Continue from:
+
+`docs/CONTINUE_IN_NEW_CHAT.md`
