@@ -94,7 +94,6 @@ cells = [
         possible_paths = [
             "../input/moctale-moderation-ai-demo/moderation_examples.csv",
             "../input/moctale-moderation-ai-demo/data/moderation_examples.csv",
-            "../input/moctale-moderation-ai-demo/moctale-kaggle-dataset/data/moderation_examples.csv",
             "../input/moctale-moderation-ai/moderation_examples.csv",
             "../input/moctale-moderation-ai/data/moderation_examples.csv",
             "data/moderation_examples.csv",
@@ -102,17 +101,9 @@ cells = [
         ]
 
         data_path = next((p for p in possible_paths if os.path.exists(p)), None)
-        if data_path is None and os.path.exists("/kaggle/input"):
-            matches = []
-            for root, dirs, files in os.walk("/kaggle/input"):
-                if "moderation_examples.csv" in files:
-                    matches.append(os.path.join(root, "moderation_examples.csv"))
-            data_path = matches[0] if matches else None
-
         if data_path is None:
             raise FileNotFoundError("Could not find moderation_examples.csv. Upload it to Kaggle or run this notebook from the repo root.")
 
-        print(f"Using dataset: {data_path}")
         df = pd.read_csv(data_path)
         print(df.shape)
         display(df.head(5))
