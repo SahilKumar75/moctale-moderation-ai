@@ -1,0 +1,35 @@
+field,description
+example_id,Stable row identifier.
+scenario_id,Scenario grouping used to avoid split leakage.
+text,Moderation input text.
+context_type,"main_review, reply_to_review, reply_to_comment, or topic_feed."
+parent_review_rating,
+movie_rating_perfection_pct,
+movie_rating_skip_pct,
+has_mention,
+language_mix,
+target_detected,Target of negative language or abuse.
+moderation_action,"allow, flag_for_review, or flag_for_removal."
+label_primary,"safe, borderline, or unsafe."
+labels_multi,JSON array of additional labels.
+abuse_category,
+intent_label,
+severity,
+contains_profanity,
+is_directed_at_person,
+source_type,"open_source, screenshot_inspired, or synthetic."
+source_dataset,
+source_url,
+source_license,
+provenance_notes,
+is_transformed,
+transformation_type,
+contains_pii,
+pii_redaction_notes,
+split,
+created_by,
+created_at,
+review_status,
+rationale_short,Short human-readable policy reason.
+recommended_action,
+policy_version,

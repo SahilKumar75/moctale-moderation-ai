@@ -45,6 +45,29 @@ It should let someone enter 10 to 15 comments at a time and return:
 
 The notebook should also show charts and a small admin-style moderation table.
 
+## Dataset
+
+The repo now includes a 500-row demo seed dataset:
+
+`data/moderation_examples.csv`
+
+Content note: the dataset contains examples of abusive and hostile language for moderation testing.
+
+Current mix:
+
+- 245 screenshot-inspired rows, rewritten from scratch
+- 225 synthetic Moctale-style rows
+- 30 sanitized open-source Jigsaw rows
+
+The dataset is for demo evaluation and policy testing. It is not production training data, and metrics from it should not be described as production performance.
+
+Useful docs:
+
+- `docs/DATA_PROVENANCE.md`
+- `docs/dataset_card.md`
+- `docs/labeling_guidelines.md`
+- `docs/AGENT_REVIEW_SUMMARY.md`
+
 ## Model Choice
 
 The current best practical model candidate is:
