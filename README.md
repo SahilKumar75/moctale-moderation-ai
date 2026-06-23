@@ -130,7 +130,7 @@ The first notebook has been generated locally at:
 ## Run On Kaggle
 
 1. Create a Kaggle Notebook.
-2. Upload `data/moderation_examples.csv` as an input dataset, or upload this repository as a Kaggle dataset.
+2. Upload `data/moderation_examples.csv` as an input dataset, or upload this repository as a Kaggle dataset named `moctale-moderation-ai-demo`.
 3. Import or upload `notebooks/moctale_moderation_ai_demo.ipynb`.
 4. Keep `USE_HF_MODEL = False` for the fast offline demo.
 5. Run all cells.

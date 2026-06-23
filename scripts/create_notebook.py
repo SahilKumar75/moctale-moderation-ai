@@ -92,6 +92,8 @@ cells = [
     code(
         """
         possible_paths = [
+            "../input/moctale-moderation-ai-demo/moderation_examples.csv",
+            "../input/moctale-moderation-ai-demo/data/moderation_examples.csv",
             "../input/moctale-moderation-ai/moderation_examples.csv",
             "../input/moctale-moderation-ai/data/moderation_examples.csv",
             "data/moderation_examples.csv",
