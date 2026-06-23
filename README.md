@@ -4,6 +4,8 @@ Moctale Moderation AI is a low-cost comment moderation prototype for a movie and
 
 The goal is simple: catch abusive replies without blocking honest movie criticism.
 
+Tags: `moderation-ai`, `hinglish`, `toxicity-detection`, `movie-reviews`, `kaggle-notebook`, `nlp`, `human-review`
+
 On a review site, negative comments are normal. People should be able to say a movie is boring, badly paced, poorly acted, overhyped, or badly written. The problem starts when the comment turns into a direct attack on another user, reviewer, actor outside the movie context, or a community.
 
 ## What This Project Handles
@@ -66,8 +68,8 @@ Useful docs:
 - `docs/DATA_PROVENANCE.md`
 - `docs/dataset_card.md`
 - `docs/labeling_guidelines.md`
-- `docs/AGENT_REVIEW_SUMMARY.md`
-- `docs/CONTINUE_IN_NEW_CHAT.md`
+- `docs/model_plan.md`
+- `docs/synthetic_generation.md`
 
 ## Model Choice
 
@@ -119,18 +121,24 @@ flag_for_removal
 - safe vs unsafe performance
 - allow vs review vs removal performance
 
-## Project Notes
-
-The full discovery notes, policy decisions, example cases, and algorithm details are in:
-
-`PROJECT_BRIEF.md`
-
-## Next Step
+## Notebook
 
 The first notebook has been generated locally at:
 
 `notebooks/moctale_moderation_ai_demo.ipynb`
 
-It has not been tuned or committed yet. Continue from:
+## Run On Kaggle
 
-`docs/CONTINUE_IN_NEW_CHAT.md`
+1. Create a Kaggle Notebook.
+2. Upload `data/moderation_examples.csv` as an input dataset, or upload this repository as a Kaggle dataset.
+3. Import or upload `notebooks/moctale_moderation_ai_demo.ipynb`.
+4. Keep `USE_HF_MODEL = False` for the fast offline demo.
+5. Run all cells.
+
+Expected demo behavior:
+
+- harsh movie criticism stays allowed
+- likely user/reviewer abuse is flagged
+- charts, toy metrics, and an admin-style moderation table are shown
+
+Optional: set `USE_HF_MODEL = True` only if Kaggle internet is enabled and you want to test the Hugging Face toxicity model as an extra signal.
