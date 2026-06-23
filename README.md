@@ -1,0 +1,106 @@
+# Moctale Moderation AI
+
+Moctale Moderation AI is a low-cost comment moderation prototype for a movie and TV review platform.
+
+The goal is simple: catch abusive replies without blocking honest movie criticism.
+
+On a review site, negative comments are normal. People should be able to say a movie is boring, badly paced, poorly acted, overhyped, or badly written. The problem starts when the comment turns into a direct attack on another user, reviewer, actor outside the movie context, or a community.
+
+## What This Project Handles
+
+- English, Hindi, Hinglish, and Indian-style mixed language comments
+- Review replies and comment threads
+- Harsh movie criticism that should stay visible
+- Direct user abuse that should be flagged
+- Borderline comments that should go to review
+- Simple explanations for every decision
+- Basic benchmark metrics for the demo
+
+## Main Rule
+
+The system should care about the target of the comment.
+
+```text
+"This movie is shit" -> allow
+"You are shit" -> flag for removal
+```
+
+That difference is the core of the project.
+
+## Planned Demo
+
+The first version will be a Kaggle or Jupyter notebook.
+
+It should let someone enter 10 to 15 comments at a time and return:
+
+- moderation action
+- abuse category
+- intent label
+- sentiment score
+- toxicity score
+- target detected
+- confidence
+- reason
+- why it was not flagged, when allowed
+
+The notebook should also show charts and a small admin-style moderation table.
+
+## Model Choice
+
+The current best practical model candidate is:
+
+`gravitee-io/distilbert-multilingual-toxicity-classifier`
+
+Why it fits:
+
+- multilingual
+- tested on Hindi and Hinglish
+- lighter than XLM-R large models
+- usable in Kaggle
+- has a quantized ONNX path for later production work
+
+It should not be used alone. The model is only one signal inside a larger Moctale-specific moderation system.
+
+## Hybrid Approach
+
+The planned system combines:
+
+- cheap text cleanup
+- sentiment gate
+- reply and mention risk
+- rating disagreement risk
+- target detection
+- multilingual toxicity model
+- Hinglish abuse rules
+- custom decision logic
+- explanation layer
+
+This keeps costs down because the deeper checks only run on risky comments.
+
+## Actions
+
+```text
+allow
+flag_for_review
+flag_for_removal
+```
+
+## Metrics To Show
+
+- accuracy
+- precision
+- recall
+- F1 score
+- confusion matrix
+- safe vs unsafe performance
+- allow vs review vs removal performance
+
+## Project Notes
+
+The full discovery notes, policy decisions, example cases, and algorithm details are in:
+
+`PROJECT_BRIEF.md`
+
+## Next Step
+
+Build the first notebook with synthetic and screenshot-inspired sample comments, then test the hybrid decision logic against a small labeled benchmark set.
