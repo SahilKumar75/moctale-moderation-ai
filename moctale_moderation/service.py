@@ -15,6 +15,9 @@ Endpoints:
 """
 from __future__ import annotations
 
+import os
+import time
+import uuid
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -29,9 +32,11 @@ def create_app() -> Any:
         RuntimeError: If fastapi or pydantic are not installed.
     """
     try:
-        from fastapi import FastAPI
+
+        from fastapi import FastAPI, Request, Response
         from fastapi.middleware.cors import CORSMiddleware
         from fastapi.responses import JSONResponse
+        from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
         from pydantic import BaseModel, Field
     except ImportError as exc:
         raise RuntimeError(
@@ -39,18 +44,27 @@ def create_app() -> Any:
             "pip install 'moctale-moderation[server]'"
         ) from exc
 
+
+    from .audit import AuditLogger
+    from .cache import ModerationCache
     from .engine import ModerationEngine
+    from .metrics import MODERATION_DECISIONS_TOTAL, track_latency
     from .schemas import ModerationRequest
 
     engine: ModerationEngine | None = None
+    cache: ModerationCache | None = None
+    audit: AuditLogger | None = None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):  # type: ignore[type-arg]
-        """Manage engine lifecycle — warm up on startup, teardown on shutdown."""
-        nonlocal engine
+        nonlocal engine, cache, audit
         engine = ModerationEngine()
+        cache = ModerationCache(redis_url=os.getenv("REDIS_URL"))
+        audit = AuditLogger()
         yield
         engine = None
+        cache = None
+        audit = None
 
     class CommentRequest(BaseModel):
         """Single comment moderation request body."""
@@ -87,12 +101,22 @@ def create_app() -> Any:
         lifespan=lifespan,
     )
 
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
     )
+
+    @app.middleware("http")
+    async def add_request_id(request: Request, call_next):
+        req_id = str(uuid.uuid4())
+        request.state.req_id = req_id
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = req_id
+        return response
+
 
     @app.get("/health", tags=["system"])
     def health() -> dict[str, str]:
@@ -119,34 +143,73 @@ def create_app() -> Any:
             "cache_misses": cache.misses,
         }
 
+
     @app.post("/moderate", tags=["moderation"])
-    def moderate(comment: CommentRequest) -> dict[str, Any]:
-        """Moderate a single comment.
-
-        Args:
-            comment: Comment request body.
-
-        Returns:
-            ModerationResult as a dict.
-        """
+    @track_latency()
+    def moderate(comment: CommentRequest, request: Request) -> dict[str, Any]:
         assert engine is not None
-        request = ModerationRequest(**comment.model_dump())
-        return engine.analyze(request).to_dict()
+        req_id = getattr(request.state, "req_id", None)
+        
+        # Check cache
+        if cache:
+            cached = cache.get(comment.text, comment.context_type)
+            if cached:
+                return cached
+                
+        req = ModerationRequest(**comment.model_dump())
+        t0 = time.time()
+        result = engine.analyze(req)
+        latency_ms = (time.time() - t0) * 1000
+        
+        if audit:
+            audit.log_decision(comment.text, comment.context_type, result, latency_ms, req_id)
+            
+        MODERATION_DECISIONS_TOTAL.labels(
+            action=result.predicted_action, 
+            category=result.predicted_category
+        ).inc()
+            
+        res_dict = result.to_dict()
+        if cache:
+            cache.set(comment.text, comment.context_type, res_dict)
+            
+        return res_dict
 
     @app.post("/moderate/batch", tags=["moderation"])
-    async def moderate_batch(batch: BatchRequest) -> dict[str, list[dict[str, Any]]]:
-        """Moderate a batch of comments (up to 256). Uses async concurrency.
-
-        Args:
-            batch: Batch request body containing a list of comment requests.
-
-        Returns:
-            Dict with 'results' key containing list of ModerationResult dicts.
-        """
+    @track_latency()
+    async def moderate_batch(batch: BatchRequest, request: Request) -> dict[str, list[dict[str, Any]]]:
         assert engine is not None
+        req_id = getattr(request.state, "req_id", None)
         requests = [ModerationRequest(**c.model_dump()) for c in batch.comments]
+        
+        t0 = time.time()
         results = await engine.analyze_many_async(requests)
-        return {"results": [r.to_dict() for r in results]}
+        latency_ms = (time.time() - t0) * 1000
+        
+        res_dicts = []
+        for c, r in zip(batch.comments, results):
+            if audit:
+                audit.log_decision(c.text, c.context_type, r, latency_ms / len(results), req_id)
+            MODERATION_DECISIONS_TOTAL.labels(
+                action=r.predicted_action, 
+                category=r.predicted_category
+            ).inc()
+            
+            d = r.to_dict()
+            res_dicts.append(d)
+            if cache:
+                cache.set(c.text, c.context_type, d)
+                
+        return {"results": res_dicts}
+
+
+    @app.get("/metrics", tags=["system"])
+    def metrics() -> Response:
+        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+    @app.get("/review-queue", tags=["moderation"])
+    def review_queue() -> dict[str, Any]:
+        return {"items": []} # Stub for Phase 5 UI
 
     @app.post("/feedback", tags=["moderation"])
     def submit_feedback(feedback: FeedbackRequest) -> dict[str, str]:

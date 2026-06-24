@@ -26,6 +26,8 @@ server = [
     "fastapi>=0.111.0",
     "uvicorn[standard]>=0.29.0",
     "pydantic>=2.7.0",
+    "redis>=5.0.0",
+    "prometheus-client>=0.20.0",
 ]
 ml = [
     "transformers>=4.40.0",
