@@ -6,7 +6,6 @@ import nbformat as nbf
 
 ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOKS = ROOT / "notebooks"
-NOTEBOOKS.mkdir(exist_ok=True)
 
 
 def md(text):
@@ -659,7 +658,13 @@ cells = [
     )
 ]
 
-nb["cells"] = cells
-output_path = NOTEBOOKS / "moctale_moderation_ai_demo.ipynb"
-nbf.write(nb, output_path)
-print(output_path)
+def main():
+    NOTEBOOKS.mkdir(exist_ok=True)
+    nb["cells"] = cells
+    output_path = NOTEBOOKS / "moctale_moderation_ai_demo.ipynb"
+    nbf.write(nb, output_path)
+    print(output_path)
+
+
+if __name__ == "__main__":
+    main()

@@ -127,6 +127,27 @@ The first notebook has been generated locally at:
 
 `notebooks/moctale_moderation_ai_demo.ipynb`
 
+## Production-oriented Engine
+
+The notebook policy has also been extracted into a reusable Python package:
+
+```python
+from moctale_moderation import ModerationEngine
+
+engine = ModerationEngine()
+result = engine.analyze("@reviewer tu chutiya hai, review dena band kar.")
+print(result.to_dict())
+```
+
+Useful commands:
+
+```bash
+python3 -m unittest discover -s tests
+python3 scripts/benchmark_engine.py
+```
+
+The package is built around a warm, shared `ModerationEngine` with compiled regexes, phrase indexes, an LRU decision cache, and batch/async batch methods. An optional FastAPI adapter is available at `moctale_moderation.service:app` after installing `fastapi` and `uvicorn`.
+
 ## Run On Kaggle
 
 1. Create a Kaggle Notebook.

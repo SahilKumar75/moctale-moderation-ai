@@ -1,0 +1,22 @@
+# Community and identity terms used in target detection.
+# Edit this file to add new communities — no code change needed.
+# Reloaded at server startup.
+
+community_terms:
+  - community
+  - religion
+  - caste
+  - hindu
+  - muslim
+  - sikh
+  - christian
+  - dalit
+  - obc
+  - brahmin
+  - jain
+  - buddhist
+  - parsi
+  - jewish
+  - lgbtq
+  - queer
+  - transgender

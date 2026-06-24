@@ -10,6 +10,25 @@ DATA = ROOT / "data"
 REPORTS = ROOT / "reports"
 TODAY = date.today().isoformat()
 RNG = random.Random(42)
+URL_RE = re.compile(r"https?://\S+")
+IP_RE = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
+HANDLE_RE = re.compile(r"@\w+")
+SPACE_RE = re.compile(r"\s+")
+DEVANAGARI_RE = re.compile(r"[\u0900-\u097F]")
+WORD_RE = re.compile(r"[a-z0-9\-]+")
+HINGLISH_TOKENS = {
+    "hai",
+    "nahi",
+    "tu",
+    "tum",
+    "bhai",
+    "ye",
+    "bekaar",
+    "bakwas",
+    "kar",
+    "mat",
+    "log",
+}
 
 MOVIES = ["Dhurandhar", "Kantara", "Chhaava", "Animal", "Ganapath", "Peddi", "Jawan", "Leo", "Pathaan", "Sitaare"]
 RATINGS = ["Perfection", "Go For It", "Timepass", "Skip"]
@@ -18,6 +37,7 @@ SAFE_CRAFT = ["acting", "script", "story", "pacing", "direction", "dialogues", "
 NEGATIVE_ADJ = ["weak", "boring", "overhyped", "messy", "lazy", "flat", "predictable", "dragged", "confusing", "unconvincing"]
 ABUSE_SOFT = ["bewakoof", "gadha", "idiot", "clown", "mand-buddhi", "attention seeker"]
 ABUSE_HARD = ["chutiya", "TMKC", "MKL", "BKL"]
+PROFANITY_TERMS = {term.lower() for term in ABUSE_SOFT + ABUSE_HARD + ["shit", "fuck", "fucking"]}
 NEUTRAL_PHRASES = [
     "I liked the second half more than the first half.",
     "Can someone recommend similar thrillers?",
@@ -70,19 +90,18 @@ FIELDS = [
 
 
 def clean_text(text):
-    text = re.sub(r"https?://\S+", "[link]", text)
-    text = re.sub(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", "[ip]", text)
-    text = re.sub(r"@\w+", "@user", text)
-    text = re.sub(r"\s+", " ", text).strip()
+    text = URL_RE.sub("[link]", text)
+    text = IP_RE.sub("[ip]", text)
+    text = HANDLE_RE.sub("@user", text)
+    text = SPACE_RE.sub(" ", text).strip()
     return text[:280]
 
 
 def language_mix(text):
-    if re.search(r"[\u0900-\u097F]", text):
+    if DEVANAGARI_RE.search(text):
         return "hindi_devanagari"
-    hinglish_tokens = ["hai", "nahi", "tu", "tum", "bhai", "ye", "movie", "bekaar", "bakwas", "kar", "mat", "log", "review"]
-    lowered = text.lower()
-    if any(token in lowered for token in hinglish_tokens):
+    tokens = set(WORD_RE.findall(text.lower()))
+    if tokens & HINGLISH_TOKENS:
         return "hinglish_latin"
     return "english"
 
@@ -106,7 +125,7 @@ def row(text, scenario_id, context_type, rating, perfection, skip, target, actio
         "abuse_category": category,
         "intent_label": intent,
         "severity": severity,
-        "contains_profanity": str(any(term.lower() in text.lower() for term in ABUSE_SOFT + ABUSE_HARD + ["shit", "fuck", "fucking"])).lower(),
+        "contains_profanity": str(bool(set(WORD_RE.findall(text.lower())) & PROFANITY_TERMS)).lower(),
         "is_directed_at_person": str(target in ["reviewer_or_user", "community_identity", "protected_class"]).lower(),
         "source_type": source_type,
         "source_dataset": source_dataset,
@@ -332,10 +351,12 @@ def make_texts_unique(rows):
 
 
 def write_csv(rows, path):
-    with path.open("w", newline="", encoding="utf-8") as f:
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    with tmp_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDS)
         writer.writeheader()
         writer.writerows(rows)
+    tmp_path.replace(path)
 
 
 def write_dictionary(path):
@@ -351,11 +372,13 @@ def write_dictionary(path):
         "source_type": "open_source, screenshot_inspired, or synthetic.",
         "rationale_short": "Short human-readable policy reason."
     }
-    with path.open("w", newline="", encoding="utf-8") as f:
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    with tmp_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(["field", "description"])
         for field in FIELDS:
             writer.writerow([field, definitions.get(field, "")])
+    tmp_path.replace(path)
 
 
 def report(rows):

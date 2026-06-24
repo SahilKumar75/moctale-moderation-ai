@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "moctale-moderation"
+version = "0.2.0"
+description = "Production-grade multilingual social media comment moderation for Indian movie review platforms"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "SahilKumar75"}]
+keywords = ["moderation", "nlp", "hinglish", "toxicity", "hindi"]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "indic-transliteration>=2.3.39",
+    "python-json-logger>=2.0.7",
+    "pyyaml>=6.0.1",
+]
+
+[project.optional-dependencies]
+server = [
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.29.0",
+    "pydantic>=2.7.0",
+]
+ml = [
+    "transformers>=4.40.0",
+    "torch>=2.2.0",
+    "optimum>=1.19.0",
+    "onnxruntime>=1.17.0",
+    "sentence-transformers>=3.0.0",
+]
+dev = [
+    "ruff>=0.4.0",
+    "mypy>=1.9.0",
+    "coverage>=7.4.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["moctale_moderation*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
