@@ -2,5 +2,7 @@ __pycache__/
 .DS_Store
 .ipynb_checkpoints/
 *.pyc
-reports/
+reports/*.md
+reports/*.json
+!reports/.gitkeep
 kaggle_upload/

@@ -1,0 +1,11 @@
+version: '1.1'
+trained_on: /Users/sahilkumarsingh/Desktop/Moctale Moderation AI/data/moderation_examples.csv
+weights:
+  reply_context_base: 0.4
+  main_review_base: 0.05
+  has_mention: 0.3
+  negative_sentiment: 0.05
+  toxicity_scale: 0.65
+thresholds:
+  flag_for_review_risk: 0.62
+  flag_for_review_model: 0.82
