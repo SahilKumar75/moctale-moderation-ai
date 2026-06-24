@@ -181,23 +181,32 @@ class PolicyAgent(BaseAgent):
         all_signals = {**hs, **mls, **cs, "disagreement": disagreement}
         reason_codes = self.build_reason_codes(all_signals)
         
-        # --- RAG Dynamic Policy ---
+        # --- Conditional RAG (Early Exit) ---
+        # If the heuristic and model show completely benign intent, skip expensive semantic search.
         triggered_rules = []
-        rules = store.retrieve(payload.normalized_text, k=1, max_distance=1.1)
-        if rules:
-            top_rule = rules[0]
-            triggered_rules.append(top_rule.id)
-            
-            if top_rule.action != "allow":
-                # If the hardcoded engine is not sure or says allow, but RAG sees explicit abuse:
-                if action == "allow" and model_score > 0.75:
-                    action = top_rule.action
-                    category = top_rule.category
-                    severity = top_rule.severity
+        is_clean = (
+            risk_score < 0.1 
+            and model_score < 0.1 
+            and action == "allow"
+            and not any([hs.get("threat"), hs.get("severe"), hs.get("soft"), hs.get("protected_abuse"), hs.get("directed_attack")])
+        )
+
+        if not is_clean:
+            rules = store.retrieve(payload.normalized_text, k=1, max_distance=1.1)
+            if rules:
+                top_rule = rules[0]
+                triggered_rules.append(top_rule.id)
                 
-                # If hardcoded engine says flag, we adopt RAG's nuanced category
-                elif action != "allow":
-                    category = top_rule.category
+                if top_rule.action != "allow":
+                    # If the hardcoded engine is not sure or says allow, but RAG sees explicit abuse:
+                    if action == "allow" and model_score > 0.75:
+                        action = top_rule.action
+                        category = top_rule.category
+                        severity = top_rule.severity
+                    
+                    # If hardcoded engine says flag, we adopt RAG's nuanced category
+                    elif action != "allow":
+                        category = top_rule.category
                     severity = top_rule.severity
                     # We keep the base action (no escalation or downgrade based solely on RAG)
                     
