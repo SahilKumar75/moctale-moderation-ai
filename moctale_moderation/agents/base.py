@@ -99,6 +99,7 @@ class AgentBus:
                     heuristic_toxicity_score=0.0,
                     model_toxicity_score=0.0,
                     reason_codes=(),
+                    triggered_rules=[],
                     reason=f"Pipeline failed at {current_agent}",
                 )
 
@@ -116,6 +117,7 @@ class AgentBus:
                 heuristic_toxicity_score=0.0,
                 model_toxicity_score=0.0,
                 reason_codes=(),
+                triggered_rules=[],
                 reason="Pipeline incomplete",
             )
 

@@ -41,6 +41,7 @@ class ModerationResult:
     heuristic_toxicity_score: float
     model_toxicity_score: float
     reason_codes: tuple[str, ...] = field(default_factory=tuple)
+    triggered_rules: list[str] = field(default_factory=list)
     reason: str = ""
 
     def to_dict(self) -> dict[str, Any]:

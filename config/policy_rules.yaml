@@ -1,0 +1,69 @@
+rules:
+  - id: rule_hate_protected
+    description: "Derogatory, abusive, or demeaning language explicitly directed at a protected class, religion, caste, or marginalized community."
+    examples:
+      - "These [community] people should be thrown out."
+      - "Filthy [religion] needs to learn their place."
+      - "Chamar"
+      - "Faggot"
+    action: flag_for_removal
+    category: hate_or_identity_attack
+    severity: high
+
+  - id: rule_threat_violence
+    description: "Direct threats of physical harm, death, violence, or severe harassment against any individual or group."
+    examples:
+      - "I will hunt you down and kill you."
+      - "Hope you die."
+      - "Goli maar dunga"
+    action: flag_for_removal
+    category: threat_or_violence
+    severity: critical
+
+  - id: rule_personal_attack_severe
+    description: "Severe personal insults, profound profanity, or sexually explicit abuse directed at another user or reviewer."
+    examples:
+      - "You are a motherfucker."
+      - "Teri maa ki"
+      - "You absolute piece of human garbage."
+    action: flag_for_removal
+    category: personal_attack
+    severity: high
+
+  - id: rule_harassment_soft
+    description: "Soft abuse, mockery, or antagonistic insults directed at another user. Not severe enough for immediate removal but warrants review."
+    examples:
+      - "You are so dumb, why do you even post?"
+      - "Idiot reviewer doesn't know anything."
+      - "Chutiya hai kya?"
+    action: flag_for_review
+    category: harassment
+    severity: medium
+
+  - id: rule_movie_criticism
+    description: "Harsh, vulgar, or aggressive criticism that is directed entirely at a movie, its script, its characters, or the filmmaking process. No personal attacks against users."
+    examples:
+      - "This movie is utter shit."
+      - "The director is terrible."
+      - "Bakwas film hai, don't watch."
+    action: allow
+    category: non_abusive
+    severity: none
+
+  - id: rule_general_profanity
+    description: "General use of profanity or swear words that are not directed at anyone specifically, used for emphasis or frustration."
+    examples:
+      - "Fuck, that was a loud explosion."
+      - "Shit happens."
+    action: allow
+    category: non_abusive
+    severity: none
+
+  - id: rule_spam_promotional
+    description: "Irrelevant promotional content, spam links, or repeated identical phrasing indicating bot behavior."
+    examples:
+      - "Click here to win an iPhone http://spam.link"
+      - "Buy cheap followers!"
+    action: flag_for_review
+    category: spam
+    severity: low

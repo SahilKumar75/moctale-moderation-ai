@@ -139,6 +139,10 @@ class PolicyAgent(BaseAgent):
         mls = payload.ml_signals
         cs = payload.context_signals
         weights = get_risk_weights()
+        
+        # We also need the policy store
+        from moctale_moderation.policy.store import get_policy_store
+        store = get_policy_store()
 
         htox = hs.get("toxicity", 0.0)
         ml_score = mls.get("model_toxicity")
@@ -176,6 +180,34 @@ class PolicyAgent(BaseAgent):
 
         all_signals = {**hs, **mls, **cs, "disagreement": disagreement}
         reason_codes = self.build_reason_codes(all_signals)
+        
+        # --- RAG Dynamic Policy ---
+        triggered_rules = []
+        rules = store.retrieve(payload.normalized_text, k=1, max_distance=1.1)
+        if rules:
+            top_rule = rules[0]
+            triggered_rules.append(top_rule.id)
+            
+            if top_rule.action != "allow":
+                # If the hardcoded engine is not sure or says allow, but RAG sees explicit abuse:
+                if action == "allow" and model_score > 0.75:
+                    action = top_rule.action
+                    category = top_rule.category
+                    severity = top_rule.severity
+                
+                # If hardcoded engine says flag, we adopt RAG's nuanced category
+                elif action != "allow":
+                    category = top_rule.category
+                    severity = top_rule.severity
+                    # We keep the base action (no escalation or downgrade based solely on RAG)
+                    
+            else:
+                # If RAG says allow (e.g. movie criticism) but base engine flagged it for review, override it to allow.
+                # We never downgrade a severe 'flag_for_removal' based on fuzzy semantic search.
+                if action == "flag_for_review" and model_score < 0.7:
+                    action = "allow"
+                    category = top_rule.category
+                    severity = top_rule.severity
 
         payload.risk_score = risk_score
         payload.policy_action = action
@@ -204,6 +236,7 @@ class PolicyAgent(BaseAgent):
             heuristic_toxicity_score=htox,
             model_toxicity_score=round(model_score, 3),
             reason_codes=tuple(reason_codes),
+            triggered_rules=triggered_rules,
             reason=self.explain(action, target),
         )
 
