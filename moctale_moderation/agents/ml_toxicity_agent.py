@@ -7,6 +7,7 @@ from __future__ import annotations
 import logging
 
 from moctale_moderation.ml_scorer import get_default_scorer
+
 from .base import AgentPayload, AgentResult, BaseAgent
 
 log = logging.getLogger(__name__)

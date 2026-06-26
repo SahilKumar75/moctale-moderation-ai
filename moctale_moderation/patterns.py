@@ -17,7 +17,6 @@ from pathlib import Path
 
 import yaml
 
-
 # ---------------------------------------------------------------------------
 # Core regex patterns
 # ---------------------------------------------------------------------------
@@ -557,7 +556,7 @@ class PhraseMatcher:
     buckets: dict[str, tuple[str, ...]]
 
     @classmethod
-    def build(cls, phrases: frozenset[str]) -> "PhraseMatcher":
+    def build(cls, phrases: frozenset[str]) -> PhraseMatcher:
         """Build a PhraseMatcher from a frozenset of phrases.
 
         Args:

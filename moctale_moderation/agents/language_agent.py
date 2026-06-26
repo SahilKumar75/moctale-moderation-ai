@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from moctale_moderation.patterns import has_devanagari
+
 from .base import AgentPayload, AgentResult, BaseAgent
 
 log = logging.getLogger(__name__)

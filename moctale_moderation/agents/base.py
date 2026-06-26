@@ -1,7 +1,6 @@
 """Base classes for the agency-agents moderation architecture."""
 from __future__ import annotations
 
-import asyncio
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -86,10 +85,10 @@ class AgentBus:
                 current_agent = result.next_agent
             except Exception as e:
                 log.exception("Error in agent %s: %s", current_agent, e)
-                # Fallback to allow if pipeline fails critically
+                # Fail conservative: uncertain content goes to review, never silently allowed.
                 return ModerationResult(
-                    predicted_action="allow",
-                    predicted_category="error",
+                    predicted_action="flag_for_review",
+                    predicted_category="pipeline_error",
                     predicted_intent="error",
                     predicted_severity="none",
                     target_detected_pred="unknown",
@@ -98,9 +97,9 @@ class AgentBus:
                     risk_score=0.0,
                     heuristic_toxicity_score=0.0,
                     model_toxicity_score=0.0,
-                    reason_codes=(),
+                    reason_codes=("PIPELINE_ERROR",),
                     triggered_rules=[],
-                    reason=f"Pipeline failed at {current_agent}",
+                    reason=f"Pipeline failed at {current_agent} — defaulting to review",
                 )
 
         if not payload.final_result:

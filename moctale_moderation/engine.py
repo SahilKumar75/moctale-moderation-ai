@@ -8,40 +8,44 @@ import asyncio
 import logging
 import threading
 import time
-from typing import Iterable
+from collections import namedtuple
+from collections.abc import Iterable
 
-from moctale_moderation.schemas import ModerationRequest, ModerationResult
+from moctale_moderation.agents import AgentBus
+from moctale_moderation.agents.context_agent import ContextAgent
+from moctale_moderation.agents.heuristic_agent import HeuristicAgent
+from moctale_moderation.agents.intake_agent import IntakeAgent
+from moctale_moderation.agents.language_agent import LanguageAgent
+from moctale_moderation.agents.learning_agent import LearningAgent
+from moctale_moderation.agents.ml_toxicity_agent import MLToxicityAgent
+from moctale_moderation.agents.policy_agent import PolicyAgent
+from moctale_moderation.agents.review_queue_agent import ReviewQueueAgent
 from moctale_moderation.patterns import (
-    MENTION_TOKEN,
     MENTION_RE,
-    REPEATED_CHAR_RE,
-    SYMBOL_TRANSLATION,
-    SPLIT_WORD_RE,
-    SPACE_RE,
+    MENTION_TOKEN,
     NON_TOKEN_RE,
-    OBFUSCATED_SHIT_RE,
     OBFUSCATED_FUCK_RE,
+    OBFUSCATED_SHIT_RE,
+    REPEATED_CHAR_RE,
+    SPACE_RE,
+    SPLIT_WORD_RE,
+    SYMBOL_TRANSLATION,
     TOKEN_RE,
     transliterate_devanagari,
     unicode_normalize,
 )
-from moctale_moderation.agents import AgentBus
-from moctale_moderation.agents.intake_agent import IntakeAgent
-from moctale_moderation.agents.language_agent import LanguageAgent
-from moctale_moderation.agents.heuristic_agent import HeuristicAgent
-from moctale_moderation.agents.ml_toxicity_agent import MLToxicityAgent
-from moctale_moderation.agents.context_agent import ContextAgent
-from moctale_moderation.agents.policy_agent import PolicyAgent
-from moctale_moderation.agents.review_queue_agent import ReviewQueueAgent
-from moctale_moderation.agents.learning_agent import LearningAgent
+from moctale_moderation.schemas import ModerationRequest, ModerationResult
 
 log = logging.getLogger(__name__)
+
+_CacheInfo = namedtuple("CacheInfo", ["hits", "misses", "maxsize", "currsize"])
 
 
 class ModerationEngine:
     """CPU-light, thread-safe moderation policy engine."""
 
     def __init__(self, cache_size: int = 8192) -> None:
+        self._cache_ref: object | None = None  # set by service after ModerationCache init
         self._bus = AgentBus()
         self._bus.register(IntakeAgent())
         self._bus.register(LanguageAgent())
@@ -115,8 +119,19 @@ class ModerationEngine:
 
         return list(await asyncio.gather(*(run_one(r) for r in requests)))
 
-    def cache_info(self) -> object:
-        return {"hits": 0, "misses": 0, "maxsize": 8192, "currsize": 0}
+    def set_cache(self, cache: object) -> None:
+        """Wire an external ModerationCache so cache_info() returns real counters."""
+        self._cache_ref = cache
+
+    def cache_info(self) -> _CacheInfo:
+        if self._cache_ref is not None:
+            return _CacheInfo(
+                hits=getattr(self._cache_ref, "hits", 0),
+                misses=getattr(self._cache_ref, "misses", 0),
+                maxsize=8192,
+                currsize=0,
+            )
+        return _CacheInfo(hits=0, misses=0, maxsize=8192, currsize=0)
 
 
 def normalize_text(text: str) -> str:

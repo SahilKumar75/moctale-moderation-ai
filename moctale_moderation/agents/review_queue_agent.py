@@ -30,8 +30,8 @@ class ReviewQueueAgent(BaseAgent):
         if payload.final_result:
             _IN_MEMORY_QUEUE.append({
                 "text": payload.normalized_text,
-                "result": getattr(payload.final_result, "model_dump", lambda: getattr(payload.final_result, "__dict__", {}))() if hasattr(payload.final_result, "model_dump") else getattr(payload.final_result, "__dict__", {}),
-                "request": getattr(payload.request, "model_dump", lambda: getattr(payload.request, "__dict__", {}))() if hasattr(payload.request, "model_dump") else getattr(payload.request, "__dict__", {})
+                "result": payload.final_result.to_dict(),
+                "request": {k: getattr(payload.request, k) for k in payload.request.__slots__},
             })
             log.info("Enqueued item for review. Queue depth: %d", len(_IN_MEMORY_QUEUE))
 

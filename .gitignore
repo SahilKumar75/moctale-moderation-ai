@@ -6,3 +6,7 @@ reports/*.md
 reports/*.json
 !reports/.gitkeep
 kaggle_upload/
+.chroma_db/
+.serena/
+logs/
+*.egg-info/

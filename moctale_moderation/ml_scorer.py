@@ -42,7 +42,7 @@ class MLScorer:
         self._available = pipeline is not None
 
     @classmethod
-    def build(cls, timeout: float = _LOAD_TIMEOUT_S) -> "MLScorer":
+    def build(cls, timeout: float = _LOAD_TIMEOUT_S) -> MLScorer:
         """Load the ML model (lazy, with timeout guard).
 
         Returns an MLScorer using the real model if available,
@@ -122,7 +122,7 @@ class MLScorer:
     @staticmethod
     def _heuristic(text: str) -> SentimentResult:
         """Fallback bag-of-words sentiment heuristic."""
-        from .patterns import POSITIVE_TERMS, NEGATIVE_TERMS
+        from .patterns import NEGATIVE_TERMS, POSITIVE_TERMS
         tokens = frozenset(text.split())
         pos = sum(1 for t in POSITIVE_TERMS if t in text or t in tokens)
         neg = sum(1 for t in NEGATIVE_TERMS if t in text or t in tokens)

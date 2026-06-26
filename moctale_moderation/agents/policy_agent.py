@@ -8,10 +8,12 @@ import logging
 import math
 import threading
 from pathlib import Path
+from typing import Any
 
 import yaml
 
 from moctale_moderation.schemas import ModerationResult
+
 from .base import AgentPayload, AgentResult, BaseAgent
 
 log = logging.getLogger(__name__)
@@ -35,7 +37,7 @@ class RiskWeights:
         self.flag_for_review_model = thresholds.get("flag_for_review_model", 0.82)
 
     @classmethod
-    def from_yaml(cls, path: Path | None = None) -> "RiskWeights":
+    def from_yaml(cls, path: Path | None = None) -> RiskWeights:
         path = path or _CONFIG_DIR / "risk_weights.yaml"
         if not path.exists():
             return cls({}, {})
@@ -111,9 +113,15 @@ class PolicyAgent(BaseAgent):
             return "flag_for_removal", "threat_or_violence", "threat", "critical"
         if protected_abuse and target == "protected_class":
             return "flag_for_removal", "hate_or_identity_attack", "insult", "high"
+        if protected_abuse:
+            # Protected abuse detected even when target isn't confirmed — escalate
+            return "flag_for_removal", "hate_or_identity_attack", "insult", "high"
         if severe and target in PERSON_OR_GROUP_TARGETS | {"unknown"}:
             category = "hate_or_identity_attack" if target == "protected_class" else "personal_attack"
             return "flag_for_removal", category, "insult", "high"
+        if directed_attack and severe:
+            # Directed attack + severe abuse — escalate from review to removal
+            return "flag_for_removal", "personal_attack", "insult", "high"
         if directed_attack and target in PERSON_OR_GROUP_TARGETS | {"unknown"}:
             return "flag_for_review", "harassment", "trolling", "medium"
         if soft and target in PERSON_OR_GROUP_TARGETS:
@@ -211,12 +219,9 @@ class PolicyAgent(BaseAgent):
                     # We keep the base action (no escalation or downgrade based solely on RAG)
                     
             else:
-                # If RAG says allow (e.g. movie criticism) but base engine flagged it for review, override it to allow.
-                # We never downgrade a severe 'flag_for_removal' based on fuzzy semantic search.
-                if action == "flag_for_review" and model_score < 0.7:
-                    action = "allow"
-                    category = top_rule.category
-                    severity = top_rule.severity
+                # RAG returned no matching rules — means "I don't know", not "allow".
+                # Leave action, category, and severity unchanged (trust heuristic + model score).
+                pass
 
         payload.risk_score = risk_score
         payload.policy_action = action

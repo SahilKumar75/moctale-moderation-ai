@@ -4,19 +4,20 @@ from __future__ import annotations
 import logging
 
 from moctale_moderation.patterns import (
-    MENTION_TOKEN,
-    PhraseMatcher,
-    GROUP_TARGET_PHRASES,
-    DIRECTED_ATTACK_PHRASES,
-    PROTECTED_ABUSE_PHRASES,
-    SOFT_ABUSE,
-    SEVERE_ABUSE,
-    THREAT_TERMS,
-    PROFANITY,
     COMMUNITY_TERMS,
+    DIRECTED_ATTACK_PHRASES,
+    GROUP_TARGET_PHRASES,
+    MENTION_TOKEN,
+    MOVIE_TERMS,
+    PROFANITY,
+    PROTECTED_ABUSE_PHRASES,
+    SEVERE_ABUSE,
+    SOFT_ABUSE,
+    THREAT_TERMS,
     USER_TERMS,
-    MOVIE_TERMS
+    PhraseMatcher,
 )
+
 from .base import AgentPayload, AgentResult, BaseAgent
 
 log = logging.getLogger(__name__)

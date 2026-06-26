@@ -1,0 +1,4 @@
+# HF Space requirements — lighter than requirements.txt (no chromadb/fastapi/uvicorn)
+# Copy this to requirements.txt in the HF Space repo.
+gradio>=4.0.0
+pyyaml>=6.0

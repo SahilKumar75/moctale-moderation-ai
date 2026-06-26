@@ -4,7 +4,7 @@ from __future__ import annotations
 __version__ = "0.2.0"
 
 from .engine import ModerationEngine, get_default_engine
-from .schemas import ModerationRequest, ModerationResult, ModerationAction, ContextType
+from .schemas import ContextType, ModerationAction, ModerationRequest, ModerationResult
 
 __all__ = [
     "__version__",

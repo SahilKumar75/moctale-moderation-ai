@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import logging.handlers
 import time
 from pathlib import Path
 from typing import Any
@@ -12,21 +13,41 @@ from .schemas import ModerationResult
 
 log = logging.getLogger(__name__)
 
+_AUDIT_MAX_BYTES = 10 * 1024 * 1024  # 10 MB per file
+_AUDIT_BACKUP_COUNT = 5
+
+
+class _PlainFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:  # type: ignore[override]
+        return record.getMessage()
+
 
 class AuditLogger:
     """GDPR-safe audit logger for moderation decisions.
-    
-    Writes structured JSONL logs containing metadata about flagged content,
-    storing irreversible text hashes rather than raw PII text.
+
+    Writes structured JSONL. Rotates at 10 MB, keeping 5 backups.
+    Stores irreversible SHA-256 hashes instead of raw text (GDPR compliance).
     """
 
     def __init__(self, log_dir: str | Path = "logs", filename: str = "audit.jsonl") -> None:
-        self.log_dir = Path(log_dir)
-        self.log_dir.mkdir(parents=True, exist_ok=True)
-        self.filepath = self.log_dir / filename
+        log_dir_path = Path(log_dir)
+        log_dir_path.mkdir(parents=True, exist_ok=True)
+        filepath = log_dir_path / filename
+
+        handler = logging.handlers.RotatingFileHandler(
+            filepath,
+            maxBytes=_AUDIT_MAX_BYTES,
+            backupCount=_AUDIT_BACKUP_COUNT,
+            encoding="utf-8",
+        )
+        handler.setFormatter(_PlainFormatter())
+
+        self._audit_log = logging.getLogger(f"moctale.audit.{id(self)}")
+        self._audit_log.propagate = False
+        self._audit_log.setLevel(logging.INFO)
+        self._audit_log.addHandler(handler)
 
     def _hash_text(self, text: str) -> str:
-        """Create irreversible hash of text for compliance."""
         return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
     def log_decision(
@@ -37,9 +58,7 @@ class AuditLogger:
         latency_ms: float,
         request_id: str | None = None,
     ) -> None:
-        """Write a decision to the audit log if action is taken."""
         if result.predicted_action == "allow":
-            # Don't bloat audit logs with benign content
             return
 
         entry: dict[str, Any] = {
@@ -56,7 +75,6 @@ class AuditLogger:
         }
 
         try:
-            with self.filepath.open("a", encoding="utf-8") as f:
-                f.write(json.dumps(entry) + "\n")
+            self._audit_log.info(json.dumps(entry))
         except Exception as e:
             log.error("Failed to write audit log", extra={"error": str(e), "entry": entry})

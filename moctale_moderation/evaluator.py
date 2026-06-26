@@ -12,18 +12,36 @@ Usage::
 from __future__ import annotations
 
 import csv
-import json
-from dataclasses import dataclass, field, asdict
+import subprocess
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from importlib.metadata import version as pkg_version
 from pathlib import Path
 from typing import Any
-
 
 ACTIONS = ["allow", "flag_for_review", "flag_for_removal"]
 
 
+def _git_sha() -> str:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+        )
+        return result.stdout.strip() if result.returncode == 0 else "unknown"
+    except Exception:
+        return "unknown"
+
+
+def _engine_version() -> str:
+    try:
+        return pkg_version("moctale-moderation")
+    except Exception:
+        return "unknown"
+
+
 @dataclass
 class ClassMetrics:
-    """Per-class precision, recall, F1."""
     label: str
     tp: int = 0
     fp: int = 0
@@ -49,12 +67,15 @@ class ClassMetrics:
 
 @dataclass
 class EvaluationReport:
-    """Full evaluation report."""
     dataset_path: str
     total: int = 0
     skipped: int = 0
     per_class: dict[str, ClassMetrics] = field(default_factory=dict)
     confusion: dict[str, dict[str, int]] = field(default_factory=dict)
+    per_language: dict[str, dict[str, Any]] = field(default_factory=dict)
+    generated_at: str = ""
+    engine_version: str = ""
+    git_sha: str = ""
 
     @property
     def macro_f1(self) -> float:
@@ -74,10 +95,12 @@ class EvaluationReport:
         return correct / self.total if self.total > 0 else 0.0
 
     def summary(self) -> str:
-        """Return a Markdown-formatted summary table."""
         lines = [
             "# Moctale Moderation AI — Evaluation Report\n",
             f"**Dataset**: {self.dataset_path}  ",
+            f"**Generated**: {self.generated_at}  ",
+            f"**Engine version**: {self.engine_version}  ",
+            f"**Git SHA**: {self.git_sha}  ",
             f"**Total rows**: {self.total} ({self.skipped} skipped)  ",
             f"**Accuracy**: {self.accuracy:.3f}  ",
             f"**Macro F1**: {self.macro_f1:.3f}  ",
@@ -94,6 +117,16 @@ class EvaluationReport:
                 lines.append(
                     f"| {label} | {m.precision:.3f} | {m.recall:.3f} | {m.f1:.3f} | {m.support} |"
                 )
+
+        # Naive baseline (always predict majority class)
+        if self.per_class:
+            majority = max(self.per_class.values(), key=lambda m: m.support)
+            baseline_acc = majority.support / self.total if self.total > 0 else 0.0
+            lines += [
+                "",
+                f"**Naive baseline** (always predict `{majority.label}`): accuracy = {baseline_acc:.3f}",
+            ]
+
         lines += [
             "",
             "## Confusion Matrix",
@@ -105,12 +138,23 @@ class EvaluationReport:
             row = self.confusion.get(actual, {})
             cells = [str(row.get(pred, 0)) for pred in ACTIONS]
             lines.append(f"| **{actual}** | " + " | ".join(cells) + " |")
+
+        if self.per_language:
+            lines += ["", "## Per-Language Breakdown", ""]
+            lines += ["| Language | Count | Accuracy | Macro F1 |", "|---|---|---|---|"]
+            for lang, stats in sorted(self.per_language.items()):
+                lines.append(
+                    f"| {lang} | {stats['count']} | {stats['accuracy']:.3f} | {stats['macro_f1']:.3f} |"
+                )
+
         return "\n".join(lines)
 
     def to_json(self) -> dict[str, Any]:
-        """Return JSON-serializable dict."""
         return {
             "dataset_path": self.dataset_path,
+            "generated_at": self.generated_at,
+            "engine_version": self.engine_version,
+            "git_sha": self.git_sha,
             "total": self.total,
             "skipped": self.skipped,
             "accuracy": round(self.accuracy, 4),
@@ -126,6 +170,7 @@ class EvaluationReport:
                 for label, m in self.per_class.items()
             },
             "confusion": self.confusion,
+            "per_language": self.per_language,
         }
 
 
@@ -137,18 +182,9 @@ class Evaluator:
         dataset_path: str | Path,
         label_col: str = "moderation_action",
         text_col: str = "text",
+        language_col: str = "language_mix",
     ) -> EvaluationReport:
-        """Evaluate the default engine against a labeled CSV.
-
-        Args:
-            dataset_path: Path to CSV file with 'text' and 'label' columns.
-            label_col: Name of the ground-truth label column.
-            text_col: Name of the text column.
-
-        Returns:
-            EvaluationReport with precision, recall, F1, and confusion matrix.
-        """
-        from .engine import get_default_engine, normalize_text
+        from .engine import get_default_engine
         from .schemas import ModerationRequest
 
         engine = get_default_engine()
@@ -157,7 +193,13 @@ class Evaluator:
             dataset_path=str(path),
             per_class={a: ClassMetrics(label=a) for a in ACTIONS},
             confusion={a: {b: 0 for b in ACTIONS} for a in ACTIONS},
+            generated_at=datetime.now(UTC).isoformat(),
+            engine_version=_engine_version(),
+            git_sha=_git_sha(),
         )
+
+        # Per-language accumulators: {lang: {action: {tp/fp/fn}}}
+        lang_confusion: dict[str, dict[str, dict[str, int]]] = {}
 
         with path.open(encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
@@ -179,9 +221,12 @@ class Evaluator:
             )
             result = engine.analyze(request)
             pred_label = result.predicted_action
+            lang = row.get(language_col, "unknown").strip() or "unknown"
 
             report.total += 1
-            report.confusion[true_label][pred_label] = report.confusion[true_label].get(pred_label, 0) + 1
+            report.confusion[true_label][pred_label] = (
+                report.confusion[true_label].get(pred_label, 0) + 1
+            )
 
             for action in ACTIONS:
                 m = report.per_class[action]
@@ -191,5 +236,35 @@ class Evaluator:
                     m.fp += 1
                 elif true_label == action and pred_label != action:
                     m.fn += 1
+
+            # Language breakdown
+            if lang not in lang_confusion:
+                lang_confusion[lang] = {a: {b: 0 for b in ACTIONS} for a in ACTIONS}
+            lang_confusion[lang][true_label][pred_label] = (
+                lang_confusion[lang][true_label].get(pred_label, 0) + 1
+            )
+
+        # Aggregate per-language stats
+        for lang, conf in lang_confusion.items():
+            lang_total = sum(conf[a][b] for a in ACTIONS for b in ACTIONS)
+            lang_correct = sum(conf[a][a] for a in ACTIONS)
+            lang_acc = lang_correct / lang_total if lang_total else 0.0
+
+            lang_f1s = []
+            for action in ACTIONS:
+                tp = conf[action][action]
+                fp = sum(conf[a][action] for a in ACTIONS if a != action)
+                fn = sum(conf[action][b] for b in ACTIONS if b != action)
+                p = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+                r = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+                f1 = 2 * p * r / (p + r) if (p + r) > 0 else 0.0
+                if (tp + fn) > 0:
+                    lang_f1s.append(f1)
+
+            report.per_language[lang] = {
+                "count": lang_total,
+                "accuracy": round(lang_acc, 4),
+                "macro_f1": round(sum(lang_f1s) / len(lang_f1s), 4) if lang_f1s else 0.0,
+            }
 
         return report

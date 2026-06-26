@@ -15,6 +15,6 @@ jobs:
         with:
           python-version: '3.11'
           cache: pip
-      - run: pip install -e .
+      - run: pip install -e .[server,ml]
       - name: Run benchmark
         run: python scripts/benchmark_engine.py

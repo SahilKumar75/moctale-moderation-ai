@@ -7,5 +7,5 @@ weights:
   negative_sentiment: 0.05
   toxicity_scale: 0.65
 thresholds:
-  flag_for_review_risk: 0.62
-  flag_for_review_model: 0.82
+  flag_for_review_risk: 0.58
+  flag_for_review_model: 0.80
