@@ -1,21 +1,4 @@
-# mirrors pyproject.toml [server,ml] extras — update both together
-indic-transliteration>=2.3.39
-python-json-logger>=2.0.7
-pyyaml>=6.0.1
-# server extras
-fastapi>=0.111.0
-uvicorn[standard]>=0.29.0
-pydantic>=2.7.0
-redis>=5.0.0
-prometheus-client>=0.20.0
-slowapi>=0.1.9
-# ml extras
-transformers>=4.40.0
-torch>=2.2.0
-optimum[onnxruntime]>=1.19.0
-onnxruntime>=1.17.0
-sentence-transformers>=3.0.0
-chromadb>=0.5.0
-tf-keras>=2.16.0
-opentelemetry-exporter-otlp-proto-grpc>=1.27.0
-opentelemetry-sdk>=1.27.0
+# HF Space requirements — lighter than requirements.txt (no chromadb/fastapi/uvicorn)
+# Copy this to requirements.txt in the HF Space repo.
+gradio>=4.0.0
+pyyaml>=6.0
